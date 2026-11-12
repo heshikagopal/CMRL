@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cmrl-itam-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cmrl_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cmrl_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-cmrl_itam}
+    ports:
+      - "5432:5432"
+    volumes:
+      - cmrl_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cmrl_admin} -d ${POSTGRES_DB:-cmrl_itam}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cmrl_postgres_data:
