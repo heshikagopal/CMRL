@@ -4,15 +4,16 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
-from app.core.database import Base
+from app.core.database import Base, normalize_database_url
 import app.models  # noqa: F401 - register all SQLAlchemy models
 
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+normalized_db_url = normalize_database_url(settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", normalized_db_url.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

@@ -9,8 +9,18 @@ class Base(DeclarativeBase):
     pass
 
 
+def normalize_database_url(db_url: str) -> str:
+    url = db_url.strip()
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg2://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + url[len("postgresql://"):]
+    return url
+
+
 def _build_engine(db_url: str):
-    is_sqlite = db_url.startswith("sqlite")
+    normalized_url = normalize_database_url(db_url)
+    is_sqlite = normalized_url.startswith("sqlite")
     connect_args = {"check_same_thread": False} if is_sqlite else {}
     engine_kwargs = {
         "connect_args": connect_args,
@@ -20,7 +30,7 @@ def _build_engine(db_url: str):
         engine_kwargs["pool_size"] = 10
         engine_kwargs["max_overflow"] = 20
 
-    eng = create_engine(db_url, **engine_kwargs)
+    eng = create_engine(normalized_url, **engine_kwargs)
 
     if is_sqlite:
         @event.listens_for(eng, "connect")

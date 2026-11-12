@@ -2,8 +2,33 @@ import axios from "axios";
 
 const TOKEN_KEY = "cmrl_itam_token";
 
+const RAW_API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/+$/, "") || "";
+
+// Origin without trailing `/api` (empty string in local Vite proxy mode)
+export const BACKEND_ORIGIN = RAW_API_BASE.endsWith("/api")
+  ? RAW_API_BASE.slice(0, -4)
+  : RAW_API_BASE;
+
+export const API_BASE_URL = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/api` : "/api";
+
+export function resolveBackendUrl(path?: string | null): string {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}${normalized}` : normalized;
+}
+
+export function getWebSocketBaseUrl(): string {
+  if (BACKEND_ORIGIN) {
+    return BACKEND_ORIGIN.replace(/^https:/i, "wss:").replace(/^http:/i, "ws:");
+  }
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}`;
+}
+
 export const api = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE_URL,
   timeout: 20000,
 });
 
@@ -50,7 +75,7 @@ export function getApiErrorMessage(err: unknown, fallback = "Operation failed"):
 
 export async function downloadAuthorizedFile(url: string, filename: string): Promise<void> {
   const token = getAuthToken();
-  const res = await fetch(url, {
+  const res = await fetch(resolveBackendUrl(url), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) {

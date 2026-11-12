@@ -16,7 +16,7 @@ import {
   UserCheck,
   Wrench,
 } from "lucide-react";
-import { api, getApiErrorMessage } from "@/api/client";
+import { api, getApiErrorMessage, resolveBackendUrl } from "@/api/client";
 import { QRLabelModal } from "@/components/QRLabelModal";
 import { AssetStatusBadge, PriorityBadge, TicketStatusBadge } from "@/components/StatusBadge";
 import { Button, Card, Input, Modal, PageHeader, Select, Textarea } from "@/components/ui";
@@ -308,7 +308,7 @@ export function AssetDetailPage() {
             <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
               {a.photo_url && (
                 <a
-                  href={a.photo_url}
+                  href={resolveBackendUrl(a.photo_url)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 dark:border-slate-700"
@@ -318,7 +318,7 @@ export function AssetDetailPage() {
               )}
               {a.invoice_url && (
                 <a
-                  href={a.invoice_url}
+                  href={resolveBackendUrl(a.invoice_url)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 dark:border-slate-700"
@@ -341,7 +341,7 @@ export function AssetDetailPage() {
             </div>
             <div className="my-4 flex justify-center">
               <img
-                src={a.qr_image_url || `/api/assets/${a.asset_id}/qr`}
+                src={resolveBackendUrl(a.qr_image_url || `/api/assets/${a.asset_id}/qr`)}
                 alt={`QR Code for ${a.asset_id}`}
                 className="h-44 w-auto rounded-lg border border-slate-200 bg-white p-1"
               />

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { api, getAuthToken } from "@/api/client";
+import { api, getAuthToken, getWebSocketBaseUrl } from "@/api/client";
 import { useAuth } from "@/context/AuthContext";
 import type { AppNotification } from "@/types";
 
@@ -46,8 +46,7 @@ export function LiveProvider({ children }: { children: React.ReactNode }) {
     const token = getAuthToken();
     if (!token) return;
 
-    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${proto}//${window.location.host}/ws/live?token=${encodeURIComponent(token)}`;
+    const wsUrl = `${getWebSocketBaseUrl()}/ws/live?token=${encodeURIComponent(token)}`;
     let alive = true;
     let heartbeat: number | undefined;
 

@@ -8,7 +8,7 @@ import {
   Search,
   Wrench,
 } from "lucide-react";
-import { api, getApiErrorMessage } from "@/api/client";
+import { api, getApiErrorMessage, resolveBackendUrl } from "@/api/client";
 import { PriorityBadge, TicketStatusBadge } from "@/components/StatusBadge";
 import { Button, Card, Input, Modal, PageHeader, Select, Textarea } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
@@ -413,7 +413,7 @@ export function MaintenancePage() {
               <p className="mt-2 text-sm text-slate-800 dark:text-slate-200">{activeTicket.description}</p>
               {activeTicket.supporting_photo_url && (
                 <a
-                  href={activeTicket.supporting_photo_url}
+                  href={resolveBackendUrl(activeTicket.supporting_photo_url)}
                   target="_blank"
                   rel="noreferrer"
                   className="mt-2 inline-block text-xs font-medium text-[#0066B3] hover:underline"
