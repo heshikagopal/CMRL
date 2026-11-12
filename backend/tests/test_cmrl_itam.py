@@ -227,6 +227,15 @@ def test_asset_registration_qr_and_lifecycle(client: TestClient):
     assert len(detail.json()["status_history"]) >= 4
     assert detail.json()["asset"]["asset_id"] == aid
 
+    # Non-admin cannot delete/archive; admin soft-deletes & excludes from active listing
+    deny_del = client.delete(f"/api/assets/{aid}", headers=store_h)
+    assert deny_del.status_code == 403
+    ok_del = client.delete(f"/api/assets/{aid}", headers=admin_h)
+    assert ok_del.status_code == 200
+    after_del = client.get("/api/assets", headers=admin_h, params={"search": aid})
+    assert after_del.status_code == 200
+    assert all(item["asset_id"] != aid for item in after_del.json()["items"])
+
 
 def test_fault_ticket_maintenance_and_movement_approval(client: TestClient):
     admin_h = _login(client, "admin", "CmrlAdmin@2026")

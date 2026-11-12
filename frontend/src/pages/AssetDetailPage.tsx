@@ -13,6 +13,7 @@ import {
   Printer,
   QrCode,
   ShieldCheck,
+  Trash2,
   UserCheck,
   Wrench,
 } from "lucide-react";
@@ -46,12 +47,16 @@ export function AssetDetailPage() {
   const { hasRole } = useAuth();
   const canEdit = hasRole("ADMIN", "STORE_KEEPER");
   const canChangeStatus = hasRole("ADMIN", "TECHNICIAN", "STORE_KEEPER");
+  const canDelete = hasRole("ADMIN");
 
   const [detail, setDetail] = useState<AssetDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"journey" | "maintenance" | "movements" | "status">("journey");
   const [qrOpen, setQrOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState("");
 
   // Status Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -236,9 +241,28 @@ export function AssetDetailPage() {
                 <Edit3 className="h-3.5 w-3.5" /> Edit
               </Button>
             )}
+            {canDelete && !a.is_archived && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                onClick={() => {
+                  setDeleteErr("");
+                  setDeleteModalOpen(true);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete Asset
+              </Button>
+            )}
           </>
         }
       />
+
+      {a.is_archived && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          This asset has been deleted/archived from active CMRL registers. Historical audit and maintenance records remain preserved.
+        </div>
+      )}
 
       {/* Top Dossier Cards */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -635,6 +659,52 @@ export function AssetDetailPage() {
             <Button type="submit">Execute Transfer</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => !deleting && setDeleteModalOpen(false)}
+        title={`Delete Asset — ${a.asset_id}`}
+      >
+        <div className="space-y-4">
+          {deleteErr && (
+            <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              {deleteErr}
+            </div>
+          )}
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Are you sure you want to delete <strong>{a.name}</strong> (
+            <span className="font-mono font-semibold">{a.asset_id}</span>)?
+          </p>
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+            This removes the asset from active CMRL registers, dashboards, and reports while preserving historical audit logs and maintenance records.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={deleting} onClick={() => setDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true);
+                setDeleteErr("");
+                try {
+                  await api.delete(`/assets/${a.asset_id}`);
+                  setDeleteModalOpen(false);
+                  navigate("/assets");
+                } catch (err) {
+                  setDeleteErr(getApiErrorMessage(err, "Failed to delete asset"));
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? "Deleting..." : "Confirm Delete"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

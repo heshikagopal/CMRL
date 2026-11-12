@@ -9,11 +9,12 @@ import {
   Plus,
   QrCode,
   Search,
+  Trash2,
 } from "lucide-react";
-import { api, downloadAuthorizedFile } from "@/api/client";
+import { api, downloadAuthorizedFile, getApiErrorMessage } from "@/api/client";
 import { QRLabelModal } from "@/components/QRLabelModal";
 import { AssetStatusBadge } from "@/components/StatusBadge";
-import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
+import { Button, Card, Input, Modal, PageHeader, Select } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate } from "@/lib/utils";
 import type { Asset, AssetListResponse, Category, Location } from "@/types";
@@ -21,6 +22,7 @@ import type { Asset, AssetListResponse, Category, Location } from "@/types";
 export function AssetsPage() {
   const { hasRole } = useAuth();
   const canRegister = hasRole("ADMIN", "STORE_KEEPER");
+  const canDelete = hasRole("ADMIN");
 
   const [data, setData] = useState<AssetListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,10 @@ export function AssetsPage() {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState("");
+  const [notice, setNotice] = useState("");
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -196,6 +202,12 @@ export function AssetsPage() {
           </Select>
         </div>
 
+        {notice && (
+          <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+            {notice}
+          </div>
+        )}
+
         {selectedIds.size > 0 && (
           <div className="mt-3 flex items-center justify-between rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
             <span className="font-semibold">{selectedIds.size} asset(s) selected</span>
@@ -320,6 +332,19 @@ export function AssetsPage() {
                         >
                           <QrCode className="h-4 w-4" />
                         </button>
+                        {canDelete && (
+                          <button
+                            onClick={() => {
+                              setDeleteErr("");
+                              setDeleteTarget(a);
+                            }}
+                            title="Delete Asset"
+                            aria-label={`Delete ${a.asset_id}`}
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -358,6 +383,60 @@ export function AssetsPage() {
       </Card>
 
       <QRLabelModal asset={qrAsset} open={!!qrAsset} onClose={() => setQrAsset(null)} />
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title={`Delete Asset — ${deleteTarget?.asset_id || ""}`}
+      >
+        <div className="space-y-4">
+          {deleteErr && (
+            <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              {deleteErr}
+            </div>
+          )}
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Are you sure you want to delete <strong>{deleteTarget?.name}</strong> (
+            <span className="font-mono font-semibold">{deleteTarget?.asset_id}</span>)?
+          </p>
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+            This removes the asset from active CMRL registers, dashboards, and reports while preserving historical audit logs and maintenance records.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={deleting}
+              onClick={async () => {
+                if (!deleteTarget) return;
+                setDeleting(true);
+                setDeleteErr("");
+                try {
+                  await api.delete(`/assets/${deleteTarget.asset_id}`);
+                  const deletedId = deleteTarget.asset_id;
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(deletedId);
+                    return next;
+                  });
+                  setDeleteTarget(null);
+                  setNotice(`Asset ${deletedId} has been deleted from active registers.`);
+                  await fetchAssets();
+                } catch (err) {
+                  setDeleteErr(getApiErrorMessage(err, "Failed to delete asset"));
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? "Deleting..." : "Confirm Delete"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
